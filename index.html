@@ -1,12 +1,14 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Countryball Builder Pro</title>
+    <title>Countryball Maker 1.1</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; padding-top: 40px; }
         
+        .lang-selector { position: absolute; top: 5px; right: 10px; background: #2c3e50; color: white; border: 1px solid #444; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 0.9rem; font-weight: bold; }
+
         #canvas-container { 
             background: #252525; 
             border-radius: 15px; 
@@ -18,8 +20,15 @@
 
         .controls { background: #2c3e50; padding: 20px; border-radius: 12px; width: 100%; max-width: 420px; box-sizing: border-box; }
         
+        /* Nuevo estilo para el Select */
+        .category-select { width: 100%; padding: 12px; margin-bottom: 15px; background: #34495e; color: white; border: 1px solid #555; border-radius: 8px; font-size: 1rem; cursor: pointer; }
+        
         input[type="file"] { width: 100%; margin-bottom: 15px; color: #bdc3c7; }
         
+        .control-group { margin-bottom: 10px; }
+        .control-group label { display: block; margin-bottom: 5px; font-size: 0.9rem; }
+        .control-group input[type="range"] { width: 100%; }
+
         .btn-download { 
             width: 100%; padding: 15px; background: #27ae60; color: white; border: none; 
             border-radius: 8px; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin-top: 10px;
@@ -29,11 +38,7 @@
 
         .btn-del { width: 100%; padding: 10px; background: #c0392b; color: white; border: none; border-radius: 6px; margin-top: 10px; cursor: pointer; }
 
-        /* Estilos de la ventana de felicitación */
-        #modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); flex-direction: column; align-items: center; justify-content: center; z-index: 100;
-        }
+        #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
         #modal-content { text-align: center; background: #2c3e50; padding: 30px; border-radius: 20px; border: 3px solid #27ae60; }
         #preview-img { max-width: 250px; border-radius: 10px; margin: 20px 0; border: 2px solid white; }
         .congrats-text { font-size: 1.5rem; font-weight: bold; color: #2ecc71; margin-bottom: 10px; }
@@ -41,43 +46,112 @@
 </head>
 <body>
 
-    <h2>Countryball Creator</h2>
+    <select class="lang-selector" id="langSelect" onchange="changeLanguage()">
+        <option value="en" selected>English</option>
+        <option value="es">Español</option>
+        <option value="pt">Português</option>
+        <option value="ru">Русский</option>
+    </select>
+
+    <h2 id="t-title">Countryball Creator</h2>
     
     <div id="canvas-container">
         <canvas id="ballCanvas" width="400" height="400"></canvas>
     </div>
 
     <div class="controls">
-        <label style="display:block; margin-bottom:5px;">Añadir Imagen:</label>
+        <label id="t-catLabel" style="display:block; margin-bottom:5px;">Select Category:</label>
+        <select id="categorySelect" class="category-select">
+            <option value="3" id="t-cat3" selected>Accessory</option>
+            <option value="1" id="t-cat1">Flag (Background)</option>
+            <option value="2" id="t-cat2">Eyes</option>
+        </select>
+
+        <label id="t-add" style="display:block; margin-bottom:5px;">Add Image:</label>
         <input type="file" id="imageInput" accept="image/*">
         
         <div id="editControls" style="display:none; border-top: 1px solid #444; padding-top: 10px;">
-            <label>Escala del objeto:</label>
-            <input type="range" id="scaleRange" min="0.05" max="3" step="0.01">
-            <button class="btn-del" onclick="deleteSelected()">Eliminar Seleccionado</button>
+            <div class="control-group">
+                <label id="t-scale">Object Scale:</label>
+                <input type="range" id="scaleRange" min="0.05" max="3" step="0.01">
+            </div>
+            
+            <div class="control-group">
+                <label id="t-rotate">Object Rotation:</label>
+                <input type="range" id="rotateRange" min="-360" max="360" step="1" value="0">
+            </div>
+
+            <button class="btn-del" id="t-del" onclick="deleteSelected()">Delete Selected</button>
         </div>
 
-        <button class="btn-download" onclick="exportCountryball()">¡Descarga tu Countryball!</button>
+        <button class="btn-download" id="t-down" onclick="exportCountryball()">Download your Countryball!</button>
     </div>
 
     <div id="modal" onclick="closeModal()">
         <div id="modal-content" onclick="event.stopPropagation()">
             <div id="random-phrase" class="congrats-text"></div>
-            <p>¡Felicidades por tu creación!</p>
+            <p id="t-congrats">Congratulations on your creation!</p>
             <img id="preview-img" src="" alt="Vista previa">
-            <p style="font-size: 0.8rem; color: #bdc3c7;">Se ha guardado en tu carpeta de descargas</p>
-            <button onclick="closeModal()" style="padding: 10px 20px; cursor:pointer;">Cerrar</button>
+            <p id="t-saved" style="font-size: 0.8rem; color: #bdc3c7;">Saved to your downloads folder</p>
+            <button id="t-close" onclick="closeModal()" style="padding: 10px 20px; cursor:pointer;">Close</button>
         </div>
     </div>
 
     <script>
+        const i18n = {
+            en: {
+                title: "Countryball Creator", catLabel: "Select Category:", cat1: "Flag (Background)", cat2: "Eyes", cat3: "Accessory",
+                add: "Add Image:", scale: "Object Scale:", rotate: "Object Rotation:", del: "Delete Selected", down: "Download your Countryball!",
+                congrats: "Congratulations on your creation!", saved: "Saved to your downloads folder", close: "Close",
+                phrases: ["Excellent!", "Incredible!", "Exclusive!", "Masterpiece!", "Wow!"]
+            },
+            es: {
+                title: "Creador de Countryballs", catLabel: "Seleccionar Categoría:", cat1: "Bandera (Fondo)", cat2: "Ojos", cat3: "Accesorio",
+                add: "Añadir Imagen:", scale: "Escala del objeto:", rotate: "Rotación del objeto:", del: "Eliminar Seleccionado", down: "¡Descarga tu Countryball!",
+                congrats: "¡Felicidades por tu creación!", saved: "Se ha guardado en tu carpeta de descargas", close: "Cerrar",
+                phrases: ["¡Excelente!", "¡Increíble!", "¡El Exclusivo!", "¡Obra de arte!", "¡Wow!"]
+            },
+            pt: {
+                title: "Criador de Countryballs", catLabel: "Selecione a Categoria:", cat1: "Bandeira (Fundo)", cat2: "Olhos", cat3: "Acessório",
+                add: "Adicionar Imagem:", scale: "Escala do objeto:", rotate: "Rotação do objeto:", del: "Excluir Selecionado", down: "Baixe sua Countryball!",
+                congrats: "Parabéns pela sua criação!", saved: "Salvo na sua pasta de downloads", close: "Fechar",
+                phrases: ["Excelente!", "Incrível!", "Exclusivo!", "Obra de arte!", "Uau!"]
+            },
+            ru: {
+                title: "Создатель Countryball", catLabel: "Выберите категорию:", cat1: "Флаг (Фон)", cat2: "Глаза", cat3: "Аксессуар",
+                add: "Добавить изображение:", scale: "Масштаб объекта:", rotate: "Вращение объекта:", del: "Удалить выбранное", down: "Скачай свой Countryball!",
+                congrats: "Поздравляем с созданием!", saved: "Сохранено в папку загрузок", close: "Закрыть",
+                phrases: ["Отлично!", "Невероятно!", "Эксклюзив!", "Шедевр!", "Вау!"]
+            }
+        };
+
+        let currentLang = "en";
+
+        function changeLanguage() {
+            currentLang = document.getElementById('langSelect').value;
+            const t = i18n[currentLang];
+            
+            document.documentElement.lang = currentLang;
+            document.getElementById('t-title').innerText = t.title;
+            document.getElementById('t-catLabel').innerText = t.catLabel;
+            document.getElementById('t-cat1').innerText = t.cat1;
+            document.getElementById('t-cat2').innerText = t.cat2;
+            document.getElementById('t-cat3').innerText = t.cat3;
+            document.getElementById('t-add').innerText = t.add;
+            document.getElementById('t-scale').innerText = t.scale;
+            document.getElementById('t-rotate').innerText = t.rotate;
+            document.getElementById('t-del').innerText = t.del;
+            document.getElementById('t-down').innerText = t.down;
+            document.getElementById('t-congrats').innerText = t.congrats;
+            document.getElementById('t-saved').innerText = t.saved;
+            document.getElementById('t-close').innerText = t.close;
+        }
+
         const canvas = document.getElementById('ballCanvas');
         const ctx = canvas.getContext('2d');
         const imageInput = document.getElementById('imageInput');
         
-        // Forma elipsoide realista
         const ball = { x: 200, y: 210, rx: 165, ry: 148 };
-
         let layers = { flag: null, eyes: null, accessories: [] };
         let selected = null;
         let isDragging = false;
@@ -88,21 +162,37 @@
             ctx.ellipse(ball.x, ball.y, ball.rx, ball.ry, 0, 0, Math.PI * 2);
         }
 
+        function drawItem(item, isClipped) {
+            if (!item) return;
+            const w = item.img.width * item.scale;
+            const h = item.img.height * item.scale;
+            const cx = item.x + w / 2;
+            const cy = item.y + h / 2;
+
+            ctx.save();
+            if (isClipped) {
+                drawBallPath();
+                ctx.clip();
+            }
+
+            ctx.translate(cx, cy);
+            ctx.rotate((item.rotation || 0) * Math.PI / 180);
+            ctx.drawImage(item.img, -w / 2, -h / 2, w, h);
+
+            if (selected === item && !isClipped) {
+                ctx.strokeStyle = '#3498db';
+                ctx.setLineDash([5, 5]);
+                ctx.strokeRect(-w / 2, -h / 2, w, h);
+            }
+            
+            ctx.restore();
+        }
+
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 1. Bandera recortada
-            if (layers.flag) {
-                ctx.save();
-                drawBallPath();
-                ctx.clip();
-                ctx.drawImage(layers.flag.img, layers.flag.x, layers.flag.y, 
-                              layers.flag.img.width * layers.flag.scale, 
-                              layers.flag.img.height * layers.flag.scale);
-                ctx.restore();
-            }
+            if (layers.flag) drawItem(layers.flag, true);
 
-            // 2. Sombra y Volumen
             ctx.save();
             drawBallPath();
             const grad = ctx.createRadialGradient(ball.x - 45, ball.y - 45, 20, ball.x, ball.y, ball.rx);
@@ -116,46 +206,50 @@
             ctx.stroke();
             ctx.restore();
 
-            // 3. Ojos y Accesorios
-            const items = [layers.eyes, ...layers.accessories].filter(i => i);
-            items.forEach(item => {
-                ctx.drawImage(item.img, item.x, item.y, item.img.width * item.scale, item.img.height * item.scale);
-                if (selected === item) {
-                    ctx.save();
-                    ctx.strokeStyle = '#3498db';
-                    ctx.setLineDash([5, 5]);
-                    ctx.strokeRect(item.x, item.y, item.img.width * item.scale, item.img.height * item.scale);
-                    ctx.restore();
-                }
-            });
+            if (layers.eyes) drawItem(layers.eyes, false);
+            layers.accessories.forEach(acc => drawItem(acc, false));
         }
 
-        // --- Lógica de Interacción ---
         imageInput.onchange = (e) => {
+            if (!e.target.files[0]) return;
+            
             const reader = new FileReader();
             reader.onload = (ev) => {
                 const img = new Image();
                 img.onload = () => {
-                    const type = prompt("Categoría:\n1: Bandera (Fondo)\n2: Ojos\n3: Accesorio", "3");
-                    let item = { img, x: 100, y: 100, scale: 0.5 };
+                    const type = document.getElementById('categorySelect').value;
+                    let item = { img, x: 100, y: 100, scale: 0.5, rotation: 0 };
+                    
                     if (type === "1") {
                         item.scale = 1;
                         layers.flag = item;
                     } else if (type === "2") {
                         layers.eyes = item;
-                    } else {
+                    } else if (type === "3") {
                         layers.accessories.push(item);
                     }
+                    
                     selected = item;
-                    document.getElementById('editControls').style.display = 'block';
+                    updateControls();
                     draw();
+                    
+                    imageInput.value = ""; 
                 };
                 img.src = ev.target.result;
             };
             reader.readAsDataURL(e.target.files[0]);
         };
 
-        // Arrastre Táctil y Ratón
+        function updateControls() {
+            if (selected) {
+                document.getElementById('editControls').style.display = 'block';
+                document.getElementById('scaleRange').value = selected.scale;
+                document.getElementById('rotateRange').value = selected.rotation;
+            } else {
+                document.getElementById('editControls').style.display = 'none';
+            }
+        }
+
         function getPos(e) {
             const rect = canvas.getBoundingClientRect();
             const cx = e.touches ? e.touches[0].clientX : e.clientX;
@@ -164,16 +258,23 @@
         }
 
         function start(e) {
+            if (e.cancelable) e.preventDefault(); // Evita conflictos con dobles toques en móviles
+            
             const p = getPos(e);
-            const all = [...layers.accessories, layers.eyes, layers.flag].filter(i => i);
-            selected = all.find(i => p.x > i.x && p.x < i.x + i.img.width * i.scale && p.y > i.y && p.y < i.y + i.img.height * i.scale);
+            // Ordenamos desde la capa más profunda a la más superficial antes de invertirlo
+            const all = [layers.flag, layers.eyes, ...layers.accessories].filter(i => i);
+            
+            selected = all.reverse().find(i => 
+                p.x > i.x && p.x < i.x + i.img.width * i.scale && 
+                p.y > i.y && p.y < i.y + i.img.height * i.scale
+            );
+            
             if (selected) {
                 isDragging = true;
                 startX = p.x - selected.x;
                 startY = p.y - selected.y;
-                document.getElementById('editControls').style.display = 'block';
-                document.getElementById('scaleRange').value = selected.scale;
             }
+            updateControls();
             draw();
         }
 
@@ -194,35 +295,37 @@
         window.addEventListener('mouseup', () => isDragging = false);
         window.addEventListener('touchend', () => isDragging = false);
 
-        document.getElementById('scaleRange').oninput = (e) => { if(selected) { selected.scale = e.target.value; draw(); } };
+        document.getElementById('scaleRange').oninput = (e) => { 
+            if(selected) { selected.scale = parseFloat(e.target.value); draw(); } 
+        };
+        
+        document.getElementById('rotateRange').oninput = (e) => { 
+            if(selected) { selected.rotation = parseInt(e.target.value); draw(); } 
+        };
 
         function deleteSelected() {
             if (selected === layers.flag) layers.flag = null;
             else if (selected === layers.eyes) layers.eyes = null;
             else layers.accessories = layers.accessories.filter(a => a !== selected);
             selected = null;
+            updateControls();
             draw();
         }
 
-        // --- FUNCIÓN DE DESCARGA Y FELICITACIONES ---
         function exportCountryball() {
-            // Deseleccionar para que no salga el cuadro azul en la foto
-            selected = null;
+            selected = null; 
+            updateControls();
             draw();
 
-            // Elegir frase al azar
-            const frases = ["¡Excelente!", "¡Increíble!", "¡El Exclusivo!", "¡Obra de arte!", "¡Wow!"];
+            const frases = i18n[currentLang].phrases;
             const fraseAleatoria = frases[Math.floor(Math.random() * frases.length)];
             
-            // Obtener la imagen del canvas
             const dataURL = canvas.toDataURL("image/png");
             
-            // Mostrar Modal
             document.getElementById('random-phrase').innerText = fraseAleatoria;
             document.getElementById('preview-img').src = dataURL;
             document.getElementById('modal').style.display = 'flex';
 
-            // Descarga automática
             const link = document.createElement('a');
             link.download = 'mi-countryball.png';
             link.href = dataURL;
@@ -233,6 +336,7 @@
             document.getElementById('modal').style.display = 'none';
         }
 
+        changeLanguage();
         draw();
     </script>
 </body>
