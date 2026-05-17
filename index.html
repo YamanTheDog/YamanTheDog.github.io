@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Countryball Maker 1.1</title>
+    <title>Countryball Maker 1.1.1</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; padding-top: 40px; }
         
@@ -42,6 +42,13 @@
         #modal-content { text-align: center; background: #2c3e50; padding: 30px; border-radius: 20px; border: 3px solid #27ae60; }
         #preview-img { max-width: 250px; border-radius: 10px; margin: 20px 0; border: 2px solid white; }
         .congrats-text { font-size: 1.5rem; font-weight: bold; color: #2ecc71; margin-bottom: 10px; }
+
+        /* Estilos del Banner de Cookies */
+        #cookie-banner { position: fixed; bottom: 0; left: 0; width: 100%; background: #1a252f; color: white; text-align: center; padding: 20px; box-shadow: 0 -5px 15px rgba(0,0,0,0.8); z-index: 1000; display: none; box-sizing: border-box; border-top: 2px solid #34495e; }
+        #cookie-banner p { margin: 0 0 15px 0; font-size: 1rem; }
+        .cookie-btn { padding: 10px 20px; margin: 0 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.9rem; }
+        .cookie-btn.accept { background: #27ae60; color: white; }
+        .cookie-btn.reject { background: #c0392b; color: white; }
     </style>
 </head>
 <body>
@@ -97,31 +104,42 @@
         </div>
     </div>
 
+    <!-- Banner de Cookies -->
+    <div id="cookie-banner">
+        <p><strong id="t-cookieTitle">Aceptar Cookies</strong><br><span id="t-cookieDesc">(Las cookies sirven para guardar datos de la configuración)</span></p>
+        <button type="button" class="cookie-btn accept" id="t-cookieAccept" onclick="acceptCookies()">Aceptar</button>
+        <button type="button" class="cookie-btn reject" id="t-cookieReject" onclick="rejectCookies()">Rechazar</button>
+    </div>
+
     <script>
         const i18n = {
             en: {
                 title: "Countryball Creator", catLabel: "Select Category:", cat1: "Flag (Background)", cat2: "Eyes", cat3: "Accessory",
                 add: "Add Image:", scale: "Object Scale:", rotate: "Object Rotation:", del: "Delete Selected", down: "Download your Countryball!",
                 congrats: "Congratulations on your creation!", saved: "Saved to your downloads folder", close: "Close",
-                phrases: ["Excellent!", "Incredible!", "Exclusive!", "Masterpiece!", "Wow!"]
+                phrases: ["Excellent!", "Incredible!", "Exclusive!", "Masterpiece!", "Wow!"],
+                cookieTitle: "Accept Cookies", cookieDesc: "(Cookies are used to save configuration data)", cookieAccept: "Accept", cookieReject: "Reject"
             },
             es: {
                 title: "Creador de Countryballs", catLabel: "Seleccionar Categoría:", cat1: "Bandera (Fondo)", cat2: "Ojos", cat3: "Accesorio",
                 add: "Añadir Imagen:", scale: "Escala del objeto:", rotate: "Rotación del objeto:", del: "Eliminar Seleccionado", down: "¡Descarga tu Countryball!",
                 congrats: "¡Felicidades por tu creación!", saved: "Se ha guardado en tu carpeta de descargas", close: "Cerrar",
-                phrases: ["¡Excelente!", "¡Increíble!", "¡El Exclusivo!", "¡Obra de arte!", "¡Wow!"]
+                phrases: ["¡Excelente!", "¡Increíble!", "¡El Exclusivo!", "¡Obra de arte!", "¡Wow!"],
+                cookieTitle: "Aceptar Cookies", cookieDesc: "(Las cookies sirven para guardar datos de la configuración)", cookieAccept: "Aceptar", cookieReject: "Rechazar"
             },
             pt: {
                 title: "Criador de Countryballs", catLabel: "Selecione a Categoria:", cat1: "Bandeira (Fundo)", cat2: "Olhos", cat3: "Acessório",
                 add: "Adicionar Imagem:", scale: "Escala do objeto:", rotate: "Rotação do objeto:", del: "Excluir Selecionado", down: "Baixe sua Countryball!",
                 congrats: "Parabéns pela sua criação!", saved: "Salvo na sua pasta de downloads", close: "Fechar",
-                phrases: ["Excelente!", "Incrível!", "Exclusivo!", "Obra de arte!", "Uau!"]
+                phrases: ["Excelente!", "Incrível!", "Exclusivo!", "Obra de arte!", "Uau!"],
+                cookieTitle: "Aceitar Cookies", cookieDesc: "(Os cookies servem para salvar dados de configuração)", cookieAccept: "Aceitar", cookieReject: "Recusar"
             },
             ru: {
                 title: "Создатель Countryball", catLabel: "Выберите категорию:", cat1: "Флаг (Фон)", cat2: "Глаза", cat3: "Аксессуар",
                 add: "Добавить изображение:", scale: "Масштаб объекта:", rotate: "Вращение объекта:", del: "Удалить выбранное", down: "Скачай свой Countryball!",
                 congrats: "Поздравляем с созданием!", saved: "Сохранено в папку загрузок", close: "Закрыть",
-                phrases: ["Отлично!", "Невероятно!", "Эксклюзив!", "Шедевр!", "Вау!"]
+                phrases: ["Отлично!", "Невероятно!", "Эксклюзив!", "Шедевр!", "Вау!"],
+                cookieTitle: "Принять файлы cookie", cookieDesc: "(Файлы cookie используются для сохранения настроек)", cookieAccept: "Принять", cookieReject: "Отклонить"
             }
         };
 
@@ -129,6 +147,12 @@
 
         function changeLanguage() {
             currentLang = document.getElementById('langSelect').value;
+            
+            // Guardar configuración de idioma si aceptó las cookies
+            if (localStorage.getItem('cookiesAccepted') === 'true') {
+                localStorage.setItem('savedLang', currentLang);
+            }
+
             const t = i18n[currentLang];
             
             document.documentElement.lang = currentLang;
@@ -145,6 +169,12 @@
             document.getElementById('t-congrats').innerText = t.congrats;
             document.getElementById('t-saved').innerText = t.saved;
             document.getElementById('t-close').innerText = t.close;
+
+            // Traducciones aplicadas al Banner de Cookies
+            document.getElementById('t-cookieTitle').innerText = t.cookieTitle;
+            document.getElementById('t-cookieDesc').innerText = t.cookieDesc;
+            document.getElementById('t-cookieAccept').innerText = t.cookieAccept;
+            document.getElementById('t-cookieReject').innerText = t.cookieReject;
         }
 
         const canvas = document.getElementById('ballCanvas');
@@ -336,6 +366,32 @@
             document.getElementById('modal').style.display = 'none';
         }
 
+        // Lógica de Cookies y Configuración
+        function checkCookies() {
+            if (!localStorage.getItem('cookiesAccepted')) {
+                document.getElementById('cookie-banner').style.display = 'block';
+            } else {
+                // Si ya aceptó las cookies antes, restauramos su idioma guardado
+                const savedLang = localStorage.getItem('savedLang');
+                if (savedLang) {
+                    document.getElementById('langSelect').value = savedLang;
+                }
+            }
+        }
+
+        function acceptCookies() {
+            localStorage.setItem('cookiesAccepted', 'true');
+            // Guardar el idioma seleccionado en este momento preciso
+            localStorage.setItem('savedLang', document.getElementById('langSelect').value);
+            document.getElementById('cookie-banner').style.display = 'none';
+        }
+
+        function rejectCookies() {
+            document.getElementById('cookie-banner').style.display = 'none';
+        }
+
+        // Inicialización en orden correcto al cargar la página
+        checkCookies();
         changeLanguage();
         draw();
     </script>
