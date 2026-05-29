@@ -20,14 +20,13 @@
 
         .controls { background: #2c3e50; padding: 20px; border-radius: 12px; width: 100%; max-width: 420px; box-sizing: border-box; }
         
-        /* Nuevo estilo para el Select */
         .category-select { width: 100%; padding: 12px; margin-bottom: 15px; background: #34495e; color: white; border: 1px solid #555; border-radius: 8px; font-size: 1rem; cursor: pointer; }
         
         input[type="file"] { width: 100%; margin-bottom: 15px; color: #bdc3c7; }
         
         .control-group { margin-bottom: 10px; }
         .control-group label { display: block; margin-bottom: 5px; font-size: 0.9rem; }
-        .control-group input[type="range"] { width: 100%; }
+        .control-group input[type="range"] { width: 100%; cursor: pointer;}
 
         .btn-download { 
             width: 100%; padding: 15px; background: #27ae60; color: white; border: none; 
@@ -40,10 +39,9 @@
 
         #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
         #modal-content { text-align: center; background: #2c3e50; padding: 30px; border-radius: 20px; border: 3px solid #27ae60; }
-        #preview-img { max-width: 250px; border-radius: 10px; margin: 20px 0; border: 2px solid white; }
+        #preview-img { max-width: 250px; border-radius: 10px; margin: 20px 0; border: 2px solid white; background: white; }
         .congrats-text { font-size: 1.5rem; font-weight: bold; color: #2ecc71; margin-bottom: 10px; }
 
-        /* Estilos del Banner de Cookies */
         #cookie-banner { position: fixed; bottom: 0; left: 0; width: 100%; background: #1a252f; color: white; text-align: center; padding: 20px; box-shadow: 0 -5px 15px rgba(0,0,0,0.8); z-index: 1000; display: none; box-sizing: border-box; border-top: 2px solid #34495e; }
         #cookie-banner p { margin: 0 0 15px 0; font-size: 1rem; }
         .cookie-btn { padding: 10px 20px; margin: 0 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.9rem; }
@@ -104,7 +102,6 @@
         </div>
     </div>
 
-    <!-- Banner de Cookies -->
     <div id="cookie-banner">
         <p><strong id="t-cookieTitle">Aceptar Cookies</strong><br><span id="t-cookieDesc">(Las cookies sirven para guardar datos de la configuración)</span></p>
         <button type="button" class="cookie-btn accept" id="t-cookieAccept" onclick="acceptCookies()">Aceptar</button>
@@ -148,7 +145,6 @@
         function changeLanguage() {
             currentLang = document.getElementById('langSelect').value;
             
-            // Guardar configuración de idioma si aceptó las cookies
             if (localStorage.getItem('cookiesAccepted') === 'true') {
                 localStorage.setItem('savedLang', currentLang);
             }
@@ -170,7 +166,6 @@
             document.getElementById('t-saved').innerText = t.saved;
             document.getElementById('t-close').innerText = t.close;
 
-            // Traducciones aplicadas al Banner de Cookies
             document.getElementById('t-cookieTitle').innerText = t.cookieTitle;
             document.getElementById('t-cookieDesc').innerText = t.cookieDesc;
             document.getElementById('t-cookieAccept').innerText = t.cookieAccept;
@@ -196,8 +191,9 @@
             if (!item) return;
             const w = item.img.width * item.scale;
             const h = item.img.height * item.scale;
-            const cx = item.x + w / 2;
-            const cy = item.y + h / 2;
+            
+            const cx = item.x;
+            const cy = item.y;
 
             ctx.save();
             if (isClipped) {
@@ -207,10 +203,12 @@
 
             ctx.translate(cx, cy);
             ctx.rotate((item.rotation || 0) * Math.PI / 180);
+            
             ctx.drawImage(item.img, -w / 2, -h / 2, w, h);
 
             if (selected === item && !isClipped) {
                 ctx.strokeStyle = '#3498db';
+                ctx.lineWidth = 2;
                 ctx.setLineDash([5, 5]);
                 ctx.strokeRect(-w / 2, -h / 2, w, h);
             }
@@ -221,8 +219,17 @@
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            // 1. Base blanca para que la pelota tenga cuerpo si la bandera tiene transparencia (o si no hay bandera)
+            ctx.save();
+            drawBallPath();
+            ctx.fillStyle = '#ffffff'; 
+            ctx.fill();
+            ctx.restore();
+
+            // 2. Dibujamos la bandera SOBRE el fondo blanco, recortada con la forma
             if (layers.flag) drawItem(layers.flag, true);
 
+            // 3. Dibujamos las sombras y el borde SOBRE la bandera
             ctx.save();
             drawBallPath();
             const grad = ctx.createRadialGradient(ball.x - 45, ball.y - 45, 20, ball.x, ball.y, ball.rx);
@@ -236,6 +243,7 @@
             ctx.stroke();
             ctx.restore();
 
+            // 4. Dibujamos los ojos y accesorios
             if (layers.eyes) drawItem(layers.eyes, false);
             layers.accessories.forEach(acc => drawItem(acc, false));
         }
@@ -248,7 +256,8 @@
                 const img = new Image();
                 img.onload = () => {
                     const type = document.getElementById('categorySelect').value;
-                    let item = { img, x: 100, y: 100, scale: 0.5, rotation: 0 };
+                    
+                    let item = { img, x: 200, y: 200, scale: 0.5, rotation: 0 };
                     
                     if (type === "1") {
                         item.scale = 1;
@@ -282,22 +291,28 @@
 
         function getPos(e) {
             const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
             const cx = e.touches ? e.touches[0].clientX : e.clientX;
             const cy = e.touches ? e.touches[0].clientY : e.clientY;
-            return { x: cx - rect.left, y: cy - rect.top };
+            return { 
+                x: (cx - rect.left) * scaleX, 
+                y: (cy - rect.top) * scaleY 
+            };
         }
 
         function start(e) {
-            if (e.cancelable) e.preventDefault(); // Evita conflictos con dobles toques en móviles
+            if (e.cancelable) e.preventDefault(); 
             
             const p = getPos(e);
-            // Ordenamos desde la capa más profunda a la más superficial antes de invertirlo
             const all = [layers.flag, layers.eyes, ...layers.accessories].filter(i => i);
             
-            selected = all.reverse().find(i => 
-                p.x > i.x && p.x < i.x + i.img.width * i.scale && 
-                p.y > i.y && p.y < i.y + i.img.height * i.scale
-            );
+            selected = all.reverse().find(i => {
+                const w = i.img.width * i.scale;
+                const h = i.img.height * i.scale;
+                return p.x > i.x - w/2 && p.x < i.x + w/2 && 
+                       p.y > i.y - h/2 && p.y < i.y + h/2;
+            });
             
             if (selected) {
                 isDragging = true;
@@ -366,22 +381,20 @@
             document.getElementById('modal').style.display = 'none';
         }
 
-        // Lógica de Cookies y Configuración
         function checkCookies() {
             if (!localStorage.getItem('cookiesAccepted')) {
                 document.getElementById('cookie-banner').style.display = 'block';
             } else {
-                // Si ya aceptó las cookies antes, restauramos su idioma guardado
                 const savedLang = localStorage.getItem('savedLang');
                 if (savedLang) {
                     document.getElementById('langSelect').value = savedLang;
+                    currentLang = savedLang; 
                 }
             }
         }
 
         function acceptCookies() {
             localStorage.setItem('cookiesAccepted', 'true');
-            // Guardar el idioma seleccionado en este momento preciso
             localStorage.setItem('savedLang', document.getElementById('langSelect').value);
             document.getElementById('cookie-banner').style.display = 'none';
         }
@@ -390,7 +403,6 @@
             document.getElementById('cookie-banner').style.display = 'none';
         }
 
-        // Inicialización en orden correcto al cargar la página
         checkCookies();
         changeLanguage();
         draw();
